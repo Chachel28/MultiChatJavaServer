@@ -10,8 +10,9 @@ import java.util.List;
 
 public class ClientsListener extends Thread{
     private final ServerSocket serverSocket;
-    private static List<ClientThread> clientThreadList = new ArrayList<>();
-    private static List<String> usernames = new ArrayList<>();
+    private static final List<ClientThread> clientThreadList = new ArrayList<>();
+    private static final List<String> usernames = new ArrayList<>();
+    private static final List<String> disconnectedUsers = new ArrayList<>();
 
     public ClientsListener(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
@@ -36,15 +37,20 @@ public class ClientsListener extends Thread{
     }
 
     public void addUsername(String username) {
+        disconnectedUsers.remove(username);
         usernames.add(username);
-        sendUserList();
+        sendUserList("connected");
     }
 
-    private void sendUserList() {
+    private void sendUserList(String state) {
         Message connection = new Message();
-        connection.setUsername("server");
+        connection.setUsername(state);
         connection.setMessage("");
         usernames.forEach(user -> {
+            connection.setMessage(connection.getMessage().concat(user.concat("\n")));
+        });
+        connection.setMessage(connection.getMessage().concat("-"));
+        disconnectedUsers.forEach(user -> {
             connection.setMessage(connection.getMessage().concat(user.concat("\n")));
         });
         System.out.println(connection.getMessage());
@@ -53,12 +59,7 @@ public class ClientsListener extends Thread{
 
     public void removeUsername(String message) {
         usernames.remove(message);
-        Message messageDisconnected = new Message();
-        messageDisconnected.setUsername("disconnected");
-        messageDisconnected.setMessage(message + "\n");
-        usernames.forEach(user -> {
-            messageDisconnected.setMessage(messageDisconnected.getMessage().concat(user.concat("\n")));
-        });
-        sendMessageToAll(messageDisconnected);
+        disconnectedUsers.add(message);
+        sendUserList("disconnected");
     }
 }
